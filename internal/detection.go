@@ -9,7 +9,7 @@ import (
 
 	"github.com/disintegration/imaging"
 	"github.com/otiai10/gosseract/v2"
-	"github.com/simon-wg/wf-ocr/internal/wfm"
+	"github.com/simon-wg/wfinfo-go/internal/wfm"
 )
 
 func GetItemsFromImage(img image.Image) ([]wfm.ItemJson, error) {

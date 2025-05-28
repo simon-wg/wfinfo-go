@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/disintegration/imaging"
-	"github.com/simon-wg/wf-ocr/internal"
+	"github.com/simon-wg/wfinfo-go/internal"
 )
 
 func main() {

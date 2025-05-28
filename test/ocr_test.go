@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/disintegration/imaging"
-	"github.com/simon-wg/wf-ocr/internal"
+	"github.com/simon-wg/wfinfo-go/internal"
 )
 
 func TestOCR(t *testing.T) {

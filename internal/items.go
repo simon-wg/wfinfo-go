@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/simon-wg/wf-ocr/internal/wfm"
+	"github.com/simon-wg/wfinfo-go/internal/wfm"
 )
 
 func GetPrimeItems() []wfm.ItemJson {
