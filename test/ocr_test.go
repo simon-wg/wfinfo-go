@@ -3,24 +3,52 @@ package tests
 import (
 	"testing"
 
-	"github.com/otiai10/gosseract/v2"
-	"github.com/stretchr/testify/assert"
+	"github.com/disintegration/imaging"
+	"github.com/simon-wg/wf-ocr/internal"
 )
 
 func TestOCR(t *testing.T) {
-	client := gosseract.NewClient()
-	defer client.Close()
-
-	// Set the image to be processed
-	client.SetImage("test-images/1.png")
-
-	// Perform OCR on the image
-	text, err := client.Text()
+	img, err := imaging.Open("test-images/1.png")
 	if err != nil {
-		t.Fatalf("Failed to perform OCR: %v", err)
+		t.Fatalf("Error opening image: %v", err)
 	}
+	items, err := internal.GetItemsFromImage(img)
+	if err != nil {
+		t.Fatalf("Error getting items from image: %v", err)
+	}
+	expectedItems := []string{"Octavia Prime Blueprint", "Tenora Prime Blueprint", "Octavia Prime Systems Blueprint", "Harrow Prime Systems Blueprint"}
+	actualItems := []string{}
 
-	// Assert that the recognized text is as expected
-	expectedText := "Hello, World!"
-	assert.Equal(t, expectedText, text, "The recognized text does not match the expected text")
+	for _, item := range items {
+		if item.I18N["en"] != nil {
+			actualItems = append(actualItems, item.I18N["en"].Name)
+		}
+	}
+	if len(actualItems) != len(expectedItems) {
+		t.Fatalf("Expected %d items, got %d", len(expectedItems), len(actualItems))
+	}
+	for _, expected := range expectedItems {
+		found := false
+		for _, actual := range actualItems {
+			if expected == actual {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected item '%s' not found in actual items", expected)
+		}
+	}
+	for _, item := range actualItems {
+		found := false
+		for _, expected := range expectedItems {
+			if expected == item {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Unexpected item '%s' found in actual items", item)
+		}
+	}
 }

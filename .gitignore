@@ -8,6 +8,9 @@
 *.so
 *.dylib
 
+# Cached item data
+items.json
+
 # Test binary, built with `go test -c`
 *.test
 
