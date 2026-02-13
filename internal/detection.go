@@ -13,8 +13,12 @@ import (
 
 func GetItemsFromImage(img image.Image) ([]wfm.Item, error) {
 	client := gosseract.NewClient()
+	//nolint:errcheck
 	defer client.Close()
-	client.SetWhitelist("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ")
+	err := client.SetWhitelist("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ")
+	if err != nil {
+		return nil, err
+	}
 	img = preprocessImage(img)
 	items := getItemsFromImage(client, img)
 	return items, nil
@@ -63,7 +67,7 @@ func getItemsFromWords(upper *[]string, lower *[]string, trie *Trie) []wfm.Item 
 
 func findItemInWords(upper *[]string, lower *[]string, trie *Trie) (*wfm.Item, error) {
 	// Try lower row first
-	item, _, consumed := seekInRow(lower, trie.Root)
+	item, _, _ := seekInRow(lower, trie.Root)
 	if item != nil {
 		return item, nil
 	}
@@ -82,7 +86,7 @@ func findItemInWords(upper *[]string, lower *[]string, trie *Trie) (*wfm.Item, e
 		}
 	}
 
-	return nil, fmt.Errorf("No item found")
+	return nil, fmt.Errorf("no item found")
 }
 
 func seekInRow(row *[]string, startNode *TrieNode) (*wfm.Item, *TrieNode, bool) {
@@ -137,7 +141,10 @@ func getWordsFromImage(c *gosseract.Client, img image.Image) ([]string, error) {
 		return nil, err
 	}
 
-	c.SetImageFromBytes(buffer.Bytes())
+	err := c.SetImageFromBytes(buffer.Bytes())
+	if err != nil {
+		return nil, err
+	}
 
 	// Perform OCR on the image
 	text, err := c.Text()

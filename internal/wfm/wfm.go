@@ -86,6 +86,7 @@ func (c *Client) do(req *http.Request, v any) error {
 		}
 
 		if resp.StatusCode == http.StatusTooManyRequests && failureCount < 5 {
+			//nolint:errcheck
 			resp.Body.Close()
 			failureCount++
 			sleepDuration := time.Duration(math.Pow(2, float64(failureCount))) * time.Second
@@ -99,6 +100,7 @@ func (c *Client) do(req *http.Request, v any) error {
 		}
 		break
 	}
+	//nolint:errcheck
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {

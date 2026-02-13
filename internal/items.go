@@ -30,7 +30,7 @@ func filterPrimeItems(items []wfm.Item) []wfm.Item {
 		if item.Tags == nil {
 			continue // Skip items without tags
 		}
-		if !slices.Contains(item.Tags, "prime") || !(slices.Contains(item.Tags, "blueprint") || slices.Contains(item.Tags, "component")) {
+		if !slices.Contains(item.Tags, "prime") || (!slices.Contains(item.Tags, "blueprint") && !slices.Contains(item.Tags, "component")) {
 			continue
 		}
 		primeItems = append(primeItems, item)

@@ -13,13 +13,13 @@ func TestClient_FetchItems(t *testing.T) {
 	// Mock server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v2/versions" {
-			json.NewEncoder(w).Encode(genericResponse[*Versions]{
+			_ = json.NewEncoder(w).Encode(genericResponse[*Versions]{
 				Data: &Versions{UpdatedAt: "2024-01-01T00:00:00Z"},
 			})
 			return
 		}
 		if r.URL.Path == "/v2/items" {
-			json.NewEncoder(w).Encode(genericResponse[[]Item]{
+			_ = json.NewEncoder(w).Encode(genericResponse[[]Item]{
 				Data: []Item{
 					{Id: "1", Slug: "item-1"},
 				},
@@ -56,7 +56,7 @@ func TestClient_FetchItemTopOrders(t *testing.T) {
 			t.Errorf("Expected rank=5, got %s", q.Get("rank"))
 		}
 
-		json.NewEncoder(w).Encode(genericResponse[*TopOrders]{
+		_ = json.NewEncoder(w).Encode(genericResponse[*TopOrders]{
 			Data: &TopOrders{
 				Buy: []OrderWithUser{{Order: Order{Platinum: 10}}},
 			},
