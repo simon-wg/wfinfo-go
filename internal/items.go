@@ -12,22 +12,22 @@ import (
 	"github.com/simon-wg/wfinfo-go/internal/wfm"
 )
 
-func GetPrimeItems() []wfm.ItemJson {
+func GetPrimeItems() []wfm.Item {
 	items := GetItems()
 
-	forma := wfm.ItemJson{
+	forma := wfm.Item{
 		Id:      "forma",
 		Slug:    "forma",
 		GameRef: "forma",
 		Tags:    []string{"forma"},
-		I18N: map[string]*wfm.ItemI18NJson{
+		I18N: map[string]*wfm.ItemI18N{
 			"en": {
 				Name: "Forma Blueprint",
 			},
 		},
 	}
 
-	var primeItems []wfm.ItemJson
+	var primeItems []wfm.Item
 	// Filter items that can be found in relics
 	for _, item := range items {
 		if item.Tags == nil {
@@ -47,8 +47,8 @@ func GetPrimeItems() []wfm.ItemJson {
 }
 
 // GetItems retrieves all items from the Warframe Market API or from a local cache file.
-func GetItems() []wfm.ItemJson {
-	var items []wfm.ItemJson
+func GetItems() []wfm.Item {
+	var items []wfm.Item
 
 	items = getItemsFromFile()
 	if items != nil {
@@ -60,7 +60,7 @@ func GetItems() []wfm.ItemJson {
 	return items
 }
 
-func GetItemByNameSlice(nameSlice []string) *wfm.ItemJson {
+func GetItemByNameSlice(nameSlice []string) *wfm.Item {
 	name := strings.Join(nameSlice, " ")
 	for _, item := range GetItems() {
 		if item.I18N["en"].Name == name {
@@ -97,7 +97,7 @@ func getItemsPath() string {
 }
 
 // getItemsFromFile retrieves items from a local cache file if it exists and is not older than 24 hours.
-func getItemsFromFile() []wfm.ItemJson {
+func getItemsFromFile() []wfm.Item {
 	file, err := os.ReadFile(getItemsPath())
 	if err != nil {
 		return nil // File does not exist or cannot be read
@@ -111,8 +111,9 @@ func getItemsFromFile() []wfm.ItemJson {
 }
 
 // getItemsFromApi fetches items from the Warframe Market API and caches them to a local file.
-func getItemsFromApi() []wfm.ItemJson {
-	items, err := wfm.FetchItems()
+func getItemsFromApi() []wfm.Item {
+	client := wfm.NewClient()
+	items, err := client.FetchItems()
 	if err != nil {
 		panic(err)
 	}
@@ -133,6 +134,6 @@ func getItemsFromApi() []wfm.ItemJson {
 }
 
 type ItemStore struct {
-	Timestamp time.Time      `json:"timestamp"`
-	Items     []wfm.ItemJson `json:"items"`
+	Timestamp time.Time  `json:"timestamp"`
+	Items     []wfm.Item `json:"items"`
 }

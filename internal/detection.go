@@ -12,7 +12,7 @@ import (
 	"github.com/simon-wg/wfinfo-go/internal/wfm"
 )
 
-func GetItemsFromImage(img image.Image) ([]wfm.ItemJson, error) {
+func GetItemsFromImage(img image.Image) ([]wfm.Item, error) {
 	client := gosseract.NewClient()
 	client.SetWhitelist("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ")
 	defer client.Close()
@@ -23,7 +23,7 @@ func GetItemsFromImage(img image.Image) ([]wfm.ItemJson, error) {
 	return items, nil
 }
 
-func getItemsFromImage(c *gosseract.Client, img image.Image) []wfm.ItemJson {
+func getItemsFromImage(c *gosseract.Client, img image.Image) []wfm.Item {
 	upperImg := imaging.Crop(img, image.Rect(0, 0, 965, 25))
 	lowerImg := imaging.Crop(img, image.Rect(0, 25, 965, 50))
 
@@ -40,8 +40,8 @@ func getItemsFromImage(c *gosseract.Client, img image.Image) []wfm.ItemJson {
 	return items
 }
 
-func getItemsFromWords(upper *[]string, lower *[]string) []wfm.ItemJson {
-	var foundItems []wfm.ItemJson
+func getItemsFromWords(upper *[]string, lower *[]string) []wfm.Item {
+	var foundItems []wfm.Item
 	allItems := GetPrimeItems()
 
 	// What is done here is to first seek through the bottom row.
@@ -60,7 +60,7 @@ func getItemsFromWords(upper *[]string, lower *[]string) []wfm.ItemJson {
 	return foundItems
 }
 
-func findItemInWords(upper *[]string, lower *[]string, allItems []wfm.ItemJson) (*wfm.ItemJson, error) {
+func findItemInWords(upper *[]string, lower *[]string, allItems []wfm.Item) (*wfm.Item, error) {
 	candidate := []string{}
 	// Seek through the lower row first
 	candidate, wordIdx := seekItemName(candidate, lower, 0, allItems)
@@ -90,7 +90,7 @@ func findItemInWords(upper *[]string, lower *[]string, allItems []wfm.ItemJson) 
 // It returns the candidate name, the index of the word and the ptr of the row.
 // A ptrIdx != -1 indicates that the item was found and the candidate is complete.
 // A ptrIdx >= 0 indicates that the item was not found and the candidate is incomplete.
-func seekItemName(candidate []string, row *[]string, wordIdx int, allItems []wfm.ItemJson) ([]string, int) {
+func seekItemName(candidate []string, row *[]string, wordIdx int, allItems []wfm.Item) ([]string, int) {
 	ptr := 0
 	wordsFound := 0
 
@@ -117,7 +117,7 @@ func seekItemName(candidate []string, row *[]string, wordIdx int, allItems []wfm
 }
 
 // This checks if the word at the given index in the item name matches the word in the item list.
-func wordIndexCorrect(candidate []string, word string, index int, allItems []wfm.ItemJson) bool {
+func wordIndexCorrect(candidate []string, word string, index int, allItems []wfm.Item) bool {
 	for _, item := range allItems {
 		if item.I18N["en"] == nil {
 			continue // Skip items without English localization
