@@ -10,8 +10,8 @@ import (
 func TestFilterPrimeItems(t *testing.T) {
 	items := []wfm.Item{
 		{
-			Tags: []string{"prime", "warframe"},
-			I18N: map[string]*wfm.ItemI18N{"en": {Name: "Ash Prime"}},
+			Tags: []string{"prime", "warframe", "blueprint"},
+			I18N: map[string]*wfm.ItemI18N{"en": {Name: "Ash Prime Chassi Blueprint"}},
 		},
 		{
 			Tags: []string{"prime", "set", "warframe"},
@@ -22,8 +22,8 @@ func TestFilterPrimeItems(t *testing.T) {
 			I18N: map[string]*wfm.ItemI18N{"en": {Name: "Braton"}},
 		},
 		{
-			Tags: []string{"prime", "weapon"},
-			I18N: map[string]*wfm.ItemI18N{"en": {Name: "Braton Prime"}},
+			Tags: []string{"prime", "weapon", "component"},
+			I18N: map[string]*wfm.ItemI18N{"en": {Name: "Braton Prime Stock"}},
 		},
 	}
 
@@ -39,11 +39,11 @@ func TestFilterPrimeItems(t *testing.T) {
 		names = append(names, item.I18N["en"].Name)
 	}
 
-	if !slices.Contains(names, "Ash Prime") {
-		t.Errorf("Expected Ash Prime in prime items")
+	if !slices.Contains(names, "Ash Prime Chassi Blueprint") {
+		t.Errorf("Expected Ash Prime Chassi Blueprint in prime items")
 	}
-	if !slices.Contains(names, "Braton Prime") {
-		t.Errorf("Expected Braton Prime in prime items")
+	if !slices.Contains(names, "Braton Prime Stock") {
+		t.Errorf("Expected Braton Prime Stock in prime items")
 	}
 	if !slices.Contains(names, "Forma Blueprint") {
 		t.Errorf("Expected Forma Blueprint in prime items")

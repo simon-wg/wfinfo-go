@@ -37,7 +37,7 @@ func TestClosestLegalWord(t *testing.T) {
 }
 
 func TestSeekInRow(t *testing.T) {
-	item1 := wfm.Item{I18N: map[string]*wfm.ItemI18N{"en": {Name: "Ash Prime"}}}
+	item1 := wfm.Item{I18N: map[string]*wfm.ItemI18N{"en": {Name: "Ash Prime Chassi"}}}
 	item2 := wfm.Item{I18N: map[string]*wfm.ItemI18N{"en": {Name: "Ash Prime Blueprint"}}}
 
 	trie := NewTrie()
@@ -60,16 +60,16 @@ func TestSeekInRow(t *testing.T) {
 		},
 		{
 			name:          "Match partial item (prefix)",
-			row:           []string{"Ash", "Prime", "Other"},
-			expectedItem:  "Ash Prime",
-			expectedWords: 2,
+			row:           []string{"Ash", "Prime", "Chassi", "Other"},
+			expectedItem:  "Ash Prime Chassi",
+			expectedWords: 3,
 			remainingRow:  []string{"Other"},
 		},
 		{
 			name:          "No match at start",
-			row:           []string{"Other", "Ash", "Prime"},
-			expectedItem:  "Ash Prime",
-			expectedWords: 2,
+			row:           []string{"Other", "Ash", "Prime", "Blueprint"},
+			expectedItem:  "Ash Prime Blueprint",
+			expectedWords: 3,
 			remainingRow:  []string{"Other"}, // "Other" is skipped because it's at start and doesn't match
 		},
 	}
@@ -96,7 +96,7 @@ func TestSeekInRow(t *testing.T) {
 
 func TestGetItemsFromWords(t *testing.T) {
 	item1 := wfm.Item{I18N: map[string]*wfm.ItemI18N{"en": {Name: "Ash Prime Blueprint"}}}
-	item2 := wfm.Item{I18N: map[string]*wfm.ItemI18N{"en": {Name: "Tenora Prime"}}}
+	item2 := wfm.Item{I18N: map[string]*wfm.ItemI18N{"en": {Name: "Tenora Prime Stock"}}}
 
 	trie := NewTrie()
 	trie.Insert(item1)
@@ -117,8 +117,8 @@ func TestGetItemsFromWords(t *testing.T) {
 		{
 			name:          "Multiple items (lower first)",
 			upper:         []string{"Ash", "Prime", "Blueprint"},
-			lower:         []string{"Tenora", "Prime"},
-			expectedItems: []string{"Tenora Prime", "Ash Prime Blueprint"},
+			lower:         []string{"Tenora", "Prime", "Stock"},
+			expectedItems: []string{"Tenora Prime Stock", "Ash Prime Blueprint"},
 		},
 	}
 

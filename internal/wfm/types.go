@@ -465,10 +465,10 @@ type Versions struct {
 }
 
 type VersionsApps struct {
-	Ios         string `json:"ios"`
-	Android     string `json:"android"`
-	MinIos      string `json:"minIos"`
-	MinAndroid  string `json:"minAndroid"`
+	Ios        string `json:"ios"`
+	Android    string `json:"android"`
+	MinIos     string `json:"minIos"`
+	MinAndroid string `json:"minAndroid"`
 }
 
 type VersionsCollections struct {

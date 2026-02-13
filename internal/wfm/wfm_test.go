@@ -50,7 +50,7 @@ func TestClient_FetchItemTopOrders(t *testing.T) {
 		if r.URL.Path != "/v2/orders/item/ash-prime/top" {
 			t.Errorf("Unexpected path: %s", r.URL.Path)
 		}
-		
+
 		q := r.URL.Query()
 		if q.Get("rank") != "5" {
 			t.Errorf("Expected rank=5, got %s", q.Get("rank"))

@@ -30,12 +30,10 @@ func filterPrimeItems(items []wfm.Item) []wfm.Item {
 		if item.Tags == nil {
 			continue // Skip items without tags
 		}
-		if !slices.Contains(item.Tags, "prime") || slices.Contains(item.Tags, "set") {
-			continue // Skip items that are not prime
+		if !slices.Contains(item.Tags, "prime") || !(slices.Contains(item.Tags, "blueprint") || slices.Contains(item.Tags, "component")) {
+			continue
 		}
-		if slices.Contains(item.Tags, "warframe") || slices.Contains(item.Tags, "weapon") || slices.Contains(item.Tags, "archwing") || slices.Contains(item.Tags, "sentinel") {
-			primeItems = append(primeItems, item)
-		}
+		primeItems = append(primeItems, item)
 	}
 
 	primeItems = append(primeItems, forma) // Add Forma to the items fetched from the API
