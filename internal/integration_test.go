@@ -1,4 +1,4 @@
-package tests
+package internal_test
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 )
 
 func TestOCR(t *testing.T) {
-	img, err := imaging.Open("test-images/1.png")
+	img, err := imaging.Open("testdata/1.png")
 	if err != nil {
 		t.Fatalf("Error opening image: %v", err)
 	}

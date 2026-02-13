@@ -1,0 +1,32 @@
+version: '3'
+
+tasks:
+  default:
+    deps: [build]
+
+  build:
+    desc: Build all commands in cmd/ into bin/
+    sources:
+      - cmd/**/*.go
+      - internal/**/*.go
+    generates:
+      - bin/wfinfo-go
+    cmds:
+      - mkdir -p bin
+      - go build -o bin/wfinfo-go ./cmd/wfinfo-go
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  run:
+    desc: Run the wfinfo-go binary
+    deps: [build]
+    cmds:
+      - ./bin/wfinfo-go
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf bin
