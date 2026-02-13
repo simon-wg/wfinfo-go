@@ -163,7 +163,7 @@ func getWordsFromImage(c *gosseract.Client, img image.Image) ([]string, error) {
 	words := []string{}
 
 	// Split the text into words
-	for _, word := range strings.Fields(text) {
+	for word := range strings.FieldsSeq(text) {
 		word = strings.TrimSpace(word)
 		if legalWord(word, legalWords) {
 			words = append(words, word)

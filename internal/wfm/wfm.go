@@ -1,9 +1,20 @@
 package wfm
 
+import (
+	"encoding/json"
+	"fmt"
+	"math"
+	"net/http"
+	"time"
+)
+
+var MarketBaseUrl = "https://api.warframe.market"
+var ItemsUrl = MarketBaseUrl + "/v2/items"
+
 type ItemResponse struct {
-	ApiVersion string        `json:"api_version"`
-	Data       []interface{} `json:"data"`
-	Error      any           `json:"error,omitempty"`
+	ApiVersion string     `json:"api_version"`
+	Data       []ItemJson `json:"data"`
+	Error      any        `json:"error,omitempty"`
 }
 
 type ItemJson struct {
@@ -39,4 +50,42 @@ type ItemI18NJson struct {
 	Icon        string `json:"icon"`
 	Thumb       string `json:"thumb"`
 	SubIcon     string `json:"subIcon,omitempty"`
+}
+
+// FetchItems fetches items from the Warframe Market API.
+func FetchItems() ([]ItemJson, error) {
+	c := http.Client{}
+
+	// Fetch items from the Warframe Market API
+	resp, err := c.Get(ItemsUrl)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to fetch items: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Handle rate limiting by retrying after a delay
+	// If it fails 5 times, or has a different error, return an error
+	failureCount := 0
+	for resp.StatusCode == http.StatusTooManyRequests && failureCount <= 5 {
+		failureCount++
+		sleepDuration := math.Pow(2, float64(failureCount))
+		time.Sleep(time.Duration(sleepDuration) * time.Second)
+		resp, err = c.Get(ItemsUrl)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to fetch items on retry %d: %w", failureCount, err)
+		}
+		defer resp.Body.Close()
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Failed to fetch items, status code: %d", resp.StatusCode)
+	}
+
+	// Decode the JSON response from the API
+	var itemResponse ItemResponse
+	if err := json.NewDecoder(resp.Body).Decode(&itemResponse); err != nil {
+		return nil, fmt.Errorf("Failed to decode API response: %w", err)
+	}
+
+	return itemResponse.Data, nil
 }

@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	// Placeholder until screencaps work
 	image, err := imaging.Open("test/test-images/1.png")
 	if err != nil {
 		panic(err)

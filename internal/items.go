@@ -3,9 +3,8 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-	"math"
-	"net/http"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -87,9 +86,19 @@ func AllLegalWords() []string {
 	return words
 }
 
+func getItemsPath() string {
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		return "items.json"
+	}
+	appCacheDir := filepath.Join(cacheDir, "wfinfo-go")
+	_ = os.MkdirAll(appCacheDir, 0755)
+	return filepath.Join(appCacheDir, "items.json")
+}
+
 // getItemsFromFile retrieves items from a local cache file if it exists and is not older than 24 hours.
 func getItemsFromFile() []wfm.ItemJson {
-	file, err := os.ReadFile("items.json")
+	file, err := os.ReadFile(getItemsPath())
 	if err != nil {
 		return nil // File does not exist or cannot be read
 	}
@@ -103,43 +112,9 @@ func getItemsFromFile() []wfm.ItemJson {
 
 // getItemsFromApi fetches items from the Warframe Market API and caches them to a local file.
 func getItemsFromApi() []wfm.ItemJson {
-	c := http.Client{}
-
-	// Fetch items from the Warframe Market API
-	resp, err := c.Get(itemsUrl)
+	items, err := wfm.FetchItems()
 	if err != nil {
-		panic(fmt.Errorf("Failed to fetch items: %w", err))
-	}
-	defer resp.Body.Close()
-
-	// Handle rate limiting by retrying after a delay
-	// If it fails 5 times, or has a different error, panic
-	failureCount := 0
-	if resp.StatusCode == http.StatusTooManyRequests && failureCount <= 5 {
-		failureCount++
-		sleepDuration := math.Pow(2, float64(failureCount))
-		time.Sleep(time.Duration(sleepDuration) * time.Second)
-		resp, err = c.Get(itemsUrl)
-	} else if resp.StatusCode != http.StatusOK {
-		panic(fmt.Errorf("Failed to fetch items, status code: %d", resp.StatusCode))
-	}
-
-	// Decode the JSON response from the API
-	var itemResponse wfm.ItemResponse
-	if err := json.NewDecoder(resp.Body).Decode(&itemResponse); err != nil {
-		panic(fmt.Errorf("Failed to decode API response: %w", err))
-	}
-
-	// Reencode the data to ensure it is in the correct format
-	rawItems, err := json.Marshal(itemResponse.Data)
-	if err != nil {
-		panic(fmt.Errorf("Failed to marshal items: %w", err))
-	}
-
-	// Unmarshal the raw items into a slice of ItemJson
-	var items []wfm.ItemJson
-	if err := json.Unmarshal(rawItems, &items); err != nil {
-		panic(fmt.Errorf("Failed to unmarshal items: %w", err))
+		panic(err)
 	}
 
 	// Add a timestamp to the structure and write it to a file
@@ -150,7 +125,7 @@ func getItemsFromApi() []wfm.ItemJson {
 	if err != nil {
 		panic(fmt.Errorf("Failed to marshal items to JSON: %w", err))
 	}
-	if err := os.WriteFile("items.json", jsonData, 0644); err != nil {
+	if err := os.WriteFile(getItemsPath(), jsonData, 0644); err != nil {
 		panic(fmt.Errorf("Failed to write items to file: %w", err))
 	}
 
