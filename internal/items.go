@@ -8,8 +8,10 @@ import (
 )
 
 func GetPrimeItems() []wfm.Item {
-	items := GetItems()
+	return filterPrimeItems(GetItems())
+}
 
+func filterPrimeItems(items []wfm.Item) []wfm.Item {
 	forma := wfm.Item{
 		Id:      "forma",
 		Slug:    "forma",
@@ -52,27 +54,24 @@ func GetItems() []wfm.Item {
 	return items
 }
 
-func GetItemByNameSlice(nameSlice []string) *wfm.Item {
-	name := strings.Join(nameSlice, " ")
-	for _, item := range GetItems() {
-		if item.I18N["en"].Name == name {
-			return &item
-		}
-	}
-	return nil
-}
-
 // Provides a list of all legal words that can be used in item names.
 func AllLegalWords() []string {
+	return extractLegalWords(GetPrimeItems())
+}
+
+func extractLegalWords(items []wfm.Item) []string {
 	legalWords := map[string]struct{}{}
 
-	for _, item := range GetPrimeItems() {
+	for _, item := range items {
 		for word := range strings.SplitSeq(item.I18N["en"].Name, " ") {
 			legalWords[word] = struct{}{} // Use a map to ensure uniqueness
 		}
 	}
-	words := []string{}
+	words := []string{"Forma"}
 	for word := range legalWords {
+		if word == "Forma" {
+			continue
+		}
 		words = append(words, word)
 	}
 	return words

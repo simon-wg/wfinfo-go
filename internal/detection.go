@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	"slices"
 	"strings"
 
 	"github.com/disintegration/imaging"
@@ -34,103 +33,91 @@ func getItemsFromImage(c *gosseract.Client, img image.Image) []wfm.Item {
 		panic(err)
 	}
 
-	items := getItemsFromWords(&upperWords, &lowerWords)
+	allItems := GetPrimeItems()
+	trie := BuildTrie(allItems)
+	items := getItemsFromWords(&upperWords, &lowerWords, trie)
 	return items
 }
 
-func getItemsFromWords(upper *[]string, lower *[]string) []wfm.Item {
+func getItemsFromWords(upper *[]string, lower *[]string, trie *Trie) []wfm.Item {
 	var foundItems []wfm.Item
-	allItems := GetPrimeItems()
 
-	// What is done here is to first seek through the bottom row.
-	// If a word which can be an item is found we check as far as possible on the
-	// same row for the rest of the item name.
-	// Once the full name is found we remove all words that were used from the rows.
-	// If we can't find a full item name on the bottom row we check the top row for the first word/words
-	// and then check the bottom row for the rest of the item name.
-	for len(*upper) > 0 && len(*lower) > 0 {
-		item, err := findItemInWords(upper, lower, allItems)
+	for len(*upper) > 0 || len(*lower) > 0 {
+		item, err := findItemInWords(upper, lower, trie)
 		if err == nil {
 			foundItems = append(foundItems, *item)
+		} else {
+			// If no item is found, consume one word to avoid infinite loop
+			if len(*upper) > 0 {
+				*upper = (*upper)[1:]
+			} else if len(*lower) > 0 {
+				*lower = (*lower)[1:]
+			} else {
+				break
+			}
 		}
 	}
 
 	return foundItems
 }
 
-func findItemInWords(upper *[]string, lower *[]string, allItems []wfm.Item) (*wfm.Item, error) {
-	candidate := []string{}
-	// Seek through the lower row first
-	candidate, wordIdx := seekItemName(candidate, lower, 0, allItems)
-	if item := GetItemByNameSlice(candidate); item != nil {
+func findItemInWords(upper *[]string, lower *[]string, trie *Trie) (*wfm.Item, error) {
+	// Try lower row first
+	item, _, consumed := seekInRow(lower, trie.Root)
+	if item != nil {
 		return item, nil
 	}
 
-	// If we reach here, we didn't find a valid item in the lower row
-	// Now we check the upper row for the first word/words
-	candidate = []string{}
-	candidate, wordIdx = seekItemName(candidate, upper, 0, allItems)
-	if item := GetItemByNameSlice(candidate); item != nil {
+	// Try upper row
+	item, node, consumed := seekInRow(upper, trie.Root)
+	if item != nil {
 		return item, nil
 	}
 
-	// We found an incomplete item name in the upper row
-	// Now we check the lower row for the rest of the item name
-	candidate, wordIdx = seekItemName(candidate, lower, wordIdx, allItems)
-	if item := GetItemByNameSlice(candidate); item != nil {
-		return item, nil
+	if consumed {
+		// Partial match in upper, try to continue in lower
+		item, _, _ = seekInRow(lower, node)
+		if item != nil {
+			return item, nil
+		}
 	}
 
-	return nil, fmt.Errorf("No item found") // Return an empty item if no match is found
+	return nil, fmt.Errorf("No item found")
 }
 
-// This function seeks a certain row for an item name.
-// It returns the candidate name, the index of the word and the ptr of the row.
-// A ptrIdx != -1 indicates that the item was found and the candidate is complete.
-// A ptrIdx >= 0 indicates that the item was not found and the candidate is incomplete.
-func seekItemName(candidate []string, row *[]string, wordIdx int, allItems []wfm.Item) ([]string, int) {
+func seekInRow(row *[]string, startNode *TrieNode) (*wfm.Item, *TrieNode, bool) {
 	ptr := 0
+	currNode := startNode
 	wordsFound := 0
 
 	for ptr < len(*row) {
 		word := (*row)[ptr]
-		if wordIndexCorrect(candidate, word, wordIdx, allItems) {
+		if nextNode, ok := currNode.Children[word]; ok {
+			currNode = nextNode
 			wordsFound++
-			candidate = append(candidate, word)
-			wordIdx++
 			ptr++
 		} else {
 			if wordsFound > 0 {
-				*row = append((*row)[:ptr-wordsFound], (*row)[ptr:]...) // Remove the words that were used from the row
-				return candidate, wordIdx                               // Return the candidate if we have found some words
-			} else {
-				// If we haven't found any words, we need to skip this word
+				// We were matching and it stopped.
+				*row = append((*row)[:ptr-wordsFound], (*row)[ptr:]...)
+				return currNode.Item, currNode, true
+			}
+			// If we are at the start (Root), we skip this word and keep looking for a match start
+			if currNode == startNode {
 				ptr++
+			} else {
+				// We were trying to continue a match from a previous row, but it failed immediately.
+				return nil, startNode, false
 			}
 		}
 	}
 
-	*row = append((*row)[:ptr-wordsFound], (*row)[ptr:]...) // Remove the words that were used from the row
-	return candidate, wordIdx
-}
-
-// This checks if the word at the given index in the item name matches the word in the item list.
-func wordIndexCorrect(candidate []string, word string, index int, allItems []wfm.Item) bool {
-	for _, item := range allItems {
-		name := item.I18N["en"].Name
-		if !strings.Contains(name, word) {
-			continue
-		}
-		itemNameSplit := strings.Split(name, " ")
-		if index >= len(itemNameSplit) {
-			continue // Skip if the index is out of bounds for the item name
-		}
-		// Check if the candidate matches the item name up to the current index
-		if slices.Equal(candidate, itemNameSplit[:index]) && itemNameSplit[index] == word {
-			return true
-		}
+	if wordsFound > 0 {
+		*row = append((*row)[:ptr-wordsFound], (*row)[ptr:]...)
+		return currNode.Item, currNode, true
 	}
-	return false
+
+	return nil, startNode, false
 }
 
 func preprocessImage(img image.Image) image.Image {
@@ -164,22 +151,29 @@ func getWordsFromImage(c *gosseract.Client, img image.Image) ([]string, error) {
 	// Split the text into words
 	for word := range strings.FieldsSeq(text) {
 		word = strings.TrimSpace(word)
-		if legalWord(word, legalWords) {
-			words = append(words, word)
+		if correctedWord, ok := closestLegalWord(word, legalWords, 2); ok {
+			words = append(words, correctedWord)
 		}
 	}
 
 	return words, nil
 }
 
-func legalWord(word string, legalWords []string) bool {
-	if word == "forma" || word == "Forma" {
-		return true // Forma is a special case that should always be considered legal
-	}
-	for _, legalWord := range legalWords {
-		if strings.EqualFold(legalWord, word) {
-			return true
+func closestLegalWord(word string, legalWords []string, maxDistance int) (string, bool) {
+	bestWord := ""
+	minDist := maxDistance + 1
+
+	for _, legal := range legalWords {
+		dist := levenshtein(strings.ToLower(word), strings.ToLower(legal))
+		if dist < minDist {
+			minDist = dist
+			bestWord = legal
 		}
 	}
-	return false
+
+	if minDist <= maxDistance {
+		return bestWord, true
+	}
+
+	return "", false
 }
