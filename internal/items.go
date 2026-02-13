@@ -1,13 +1,8 @@
 package internal
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/simon-wg/wfinfo-go/internal/wfm"
 )
@@ -48,14 +43,11 @@ func GetPrimeItems() []wfm.Item {
 
 // GetItems retrieves all items from the Warframe Market API or from a local cache file.
 func GetItems() []wfm.Item {
-	var items []wfm.Item
-
-	items = getItemsFromFile()
-	if items != nil {
-		return items
+	client := wfm.NewClient()
+	items, err := client.FetchItems()
+	if err != nil {
+		panic(err)
 	}
-
-	items = getItemsFromApi()
 
 	return items
 }
@@ -84,56 +76,4 @@ func AllLegalWords() []string {
 		words = append(words, word)
 	}
 	return words
-}
-
-func getItemsPath() string {
-	cacheDir, err := os.UserCacheDir()
-	if err != nil {
-		return "items.json"
-	}
-	appCacheDir := filepath.Join(cacheDir, "wfinfo-go")
-	_ = os.MkdirAll(appCacheDir, 0755)
-	return filepath.Join(appCacheDir, "items.json")
-}
-
-// getItemsFromFile retrieves items from a local cache file if it exists and is not older than 24 hours.
-func getItemsFromFile() []wfm.Item {
-	file, err := os.ReadFile(getItemsPath())
-	if err != nil {
-		return nil // File does not exist or cannot be read
-	}
-	itemStore := ItemStore{}
-	json.Unmarshal(file, &itemStore)
-	if itemStore.Timestamp.Add(24 * time.Hour).After(time.Now()) {
-		return itemStore.Items // Return cached items if they are not older than 24 hours
-	}
-	return nil // Cache is outdated or not available
-}
-
-// getItemsFromApi fetches items from the Warframe Market API and caches them to a local file.
-func getItemsFromApi() []wfm.Item {
-	client := wfm.NewClient()
-	items, err := client.FetchItems()
-	if err != nil {
-		panic(err)
-	}
-
-	// Add a timestamp to the structure and write it to a file
-	var itemStore ItemStore
-	itemStore.Timestamp = time.Now()
-	itemStore.Items = items
-	jsonData, err := json.MarshalIndent(itemStore, "", "  ")
-	if err != nil {
-		panic(fmt.Errorf("Failed to marshal items to JSON: %w", err))
-	}
-	if err := os.WriteFile(getItemsPath(), jsonData, 0644); err != nil {
-		panic(fmt.Errorf("Failed to write items to file: %w", err))
-	}
-
-	return items
-}
-
-type ItemStore struct {
-	Timestamp time.Time  `json:"timestamp"`
-	Items     []wfm.Item `json:"items"`
 }

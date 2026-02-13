@@ -1,11 +1,5 @@
 package wfm
 
-type itemsResponse struct {
-	ApiVersion string `json:"api_version"`
-	Data       []Item `json:"data"`
-	Error      any    `json:"error,omitempty"`
-}
-
 type Item struct {
 	Id             string               `json:"id"`
 	Slug           string               `json:"slug"`
@@ -463,3 +457,54 @@ const (
 	ScopeLedger    Scope = "ledger"
 	ScopeReviews   Scope = "reviews"
 )
+
+type Versions struct {
+	Apps        VersionsApps        `json:"apps"`
+	Collections VersionsCollections `json:"collections"`
+	UpdatedAt   string              `json:"updatedAt"`
+}
+
+type VersionsApps struct {
+	Ios         string `json:"ios"`
+	Android     string `json:"android"`
+	MinIos      string `json:"minIos"`
+	MinAndroid  string `json:"minAndroid"`
+}
+
+type VersionsCollections struct {
+	Items     string `json:"items"`
+	Rivens    string `json:"rivens"`
+	Liches    string `json:"liches"`
+	Sisters   string `json:"sisters"`
+	Missions  string `json:"missions"`
+	Npcs      string `json:"npcs"`
+	Locations string `json:"locations"`
+}
+
+type ItemSet struct {
+	Id    string `json:"id"`
+	Items []Item `json:"items"`
+}
+
+type TopOrders struct {
+	Buy  []OrderWithUser `json:"buy"`
+	Sell []OrderWithUser `json:"sell"`
+}
+
+type TopOrdersParams struct {
+	Rank         *int
+	RankLt       *int
+	Charges      *int
+	ChargesLt    *int
+	AmberStars   *int
+	AmberStarsLt *int
+	CyanStars    *int
+	CyanStarsLt  *int
+	Subtype      string
+}
+
+type genericResponse[T any] struct {
+	ApiVersion string `json:"api_version"`
+	Data       T      `json:"data"`
+	Error      any    `json:"error,omitempty"`
+}

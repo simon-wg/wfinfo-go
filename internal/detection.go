@@ -14,12 +14,10 @@ import (
 
 func GetItemsFromImage(img image.Image) ([]wfm.Item, error) {
 	client := gosseract.NewClient()
-	client.SetWhitelist("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ")
 	defer client.Close()
-
+	client.SetWhitelist("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ")
 	img = preprocessImage(img)
 	items := getItemsFromImage(client, img)
-
 	return items, nil
 }
 
@@ -119,10 +117,11 @@ func seekItemName(candidate []string, row *[]string, wordIdx int, allItems []wfm
 // This checks if the word at the given index in the item name matches the word in the item list.
 func wordIndexCorrect(candidate []string, word string, index int, allItems []wfm.Item) bool {
 	for _, item := range allItems {
-		if item.I18N["en"] == nil {
-			continue // Skip items without English localization
+		name := item.I18N["en"].Name
+		if !strings.Contains(name, word) {
+			continue
 		}
-		itemNameSplit := strings.Split(item.I18N["en"].Name, " ")
+		itemNameSplit := strings.Split(name, " ")
 		if index >= len(itemNameSplit) {
 			continue // Skip if the index is out of bounds for the item name
 		}
