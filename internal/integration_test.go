@@ -8,47 +8,132 @@ import (
 )
 
 func TestOCR(t *testing.T) {
-	img, err := imaging.Open("testdata/legacy-1.png")
-	if err != nil {
-		t.Fatalf("Error opening image: %v", err)
+	tests := []struct {
+		name          string
+		imagePath     string
+		expectedItems []string
+	}{
+		{
+			name:      "Conquera",
+			imagePath: "testdata/conquera-1.png",
+			expectedItems: []string{
+				"Masseter Prime Handle",
+				"Epitaph Prime Barrel",
+				"Titania Prime Systems Blueprint",
+				"Trumna Prime Blueprint",
+			},
+		},
+		{
+			name:      "Contrast",
+			imagePath: "testdata/contrast-1.png",
+			expectedItems: []string{
+				"Burston Prime Receiver",
+				"Orthos Prime Handle",
+				"Ash Prime Neuroptics Blueprint",
+				"Sevagoth Prime Systems Blueprint",
+			},
+		},
+		{
+			name:      "Equinox",
+			imagePath: "testdata/equinox-1.png",
+			expectedItems: []string{
+				"Dual Zoren Prime Handle",
+				"Bronco Prime Blueprint",
+				"Alternox Prime Barrel",
+				"Trumna Prime Blueprint",
+			},
+		},
+		{
+			name:      "Harrier",
+			imagePath: "testdata/harrier-1.png",
+			expectedItems: []string{
+				"Grendle Prime Chassis Blueprint",
+				"Cernos Prime Grip",
+				"Bo Prime Blueprint",
+				"Quassus Prime Blueprint",
+			},
+		},
+		{
+			name:      "Legacy",
+			imagePath: "testdata/legacy-1.png",
+			expectedItems: []string{
+				"Hildryn Prime Systems Blueprint",
+				"Mesa Prime Blueprint",
+				"Caliban Prime Chassis Blueprint",
+				"Bronco Prime Blueprint",
+			},
+		},
+		{
+			name:      "Renewal",
+			imagePath: "testdata/renewal-1.png",
+			expectedItems: []string{
+				"Daikyu Prime Blueprint",
+				"Acceltra Prime Receiver",
+				"Caliban Prime Chassis Blueprint",
+				"Lavos Prime Chassis Blueprint",
+			},
+		},
+		{
+			name:      "Vitruvian",
+			imagePath: "testdata/vitruvian-1.png",
+			expectedItems: []string{
+				"Octavia Prime Blueprint",
+				"Tenora Prime Blueprint",
+				"Octavia Prime Systems Blueprint",
+				"Harrow Prime Systems Blueprint",
+			},
+		},
 	}
-	items, err := internal.GetItemsFromImage(img)
-	if err != nil {
-		t.Fatalf("Error getting items from image: %v", err)
-	}
-	expectedItems := []string{"Octavia Prime Blueprint", "Tenora Prime Blueprint", "Octavia Prime Systems Blueprint", "Harrow Prime Systems Blueprint"}
-	actualItems := []string{}
 
-	for _, item := range items {
-		if item.I18N["en"] != nil {
-			actualItems = append(actualItems, item.I18N["en"].Name)
-		}
-	}
-	if len(actualItems) != len(expectedItems) {
-		t.Fatalf("Expected %d items, got %d", len(expectedItems), len(actualItems))
-	}
-	for _, expected := range expectedItems {
-		found := false
-		for _, actual := range actualItems {
-			if expected == actual {
-				found = true
-				break
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img, err := imaging.Open(tt.imagePath)
+			if err != nil {
+				t.Fatalf("Error opening image: %v", err)
 			}
-		}
-		if !found {
-			t.Errorf("Expected item '%s' not found in actual items", expected)
-		}
-	}
-	for _, item := range actualItems {
-		found := false
-		for _, expected := range expectedItems {
-			if expected == item {
-				found = true
-				break
+			items, err := internal.GetItemsFromImage(img)
+			if err != nil {
+				t.Fatalf("Error getting items from image: %v", err)
 			}
-		}
-		if !found {
-			t.Errorf("Unexpected item '%s' found in actual items", item)
-		}
+
+			actualItems := make([]string, 0, len(items))
+			for _, item := range items {
+				if en, ok := item.I18N["en"]; ok {
+					actualItems = append(actualItems, en.Name)
+				}
+			}
+
+			if len(tt.expectedItems) == 0 {
+				t.Logf("Actual items for %s: %v", tt.name, actualItems)
+				return
+			}
+
+			if len(actualItems) != len(tt.expectedItems) {
+				t.Errorf("Expected %d items, got %d. Actual: %v", len(tt.expectedItems), len(actualItems), actualItems)
+				return
+			}
+
+			expectedMap := make(map[string]bool)
+			for _, item := range tt.expectedItems {
+				expectedMap[item] = true
+			}
+
+			actualMap := make(map[string]bool)
+			for _, item := range actualItems {
+				actualMap[item] = true
+			}
+
+			for item := range expectedMap {
+				if !actualMap[item] {
+					t.Errorf("Expected item '%s' not found", item)
+				}
+			}
+
+			for item := range actualMap {
+				if !expectedMap[item] {
+					t.Errorf("Unexpected item '%s' found", item)
+				}
+			}
+		})
 	}
 }
