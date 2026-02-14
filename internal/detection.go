@@ -67,61 +67,77 @@ func getItemsFromWords(upper *[]string, lower *[]string, trie *Trie) []wfm.Item 
 
 func findItemInWords(upper *[]string, lower *[]string, trie *Trie) (*wfm.Item, error) {
 	// Try lower row first
-	item, _, _ := seekInRow(lower, trie.Root)
+	item, matchCount, skipCount := findLongestMatchInRow(*lower, trie.Root)
 	if item != nil {
+		*lower = append((*lower)[:skipCount], (*lower)[skipCount+matchCount:]...)
 		return item, nil
 	}
 
 	// Try upper row
-	item, node, consumed := seekInRow(upper, trie.Root)
+	item, matchCount, skipCount = findLongestMatchInRow(*upper, trie.Root)
 	if item != nil {
+		*upper = append((*upper)[:skipCount], (*upper)[skipCount+matchCount:]...)
 		return item, nil
 	}
 
-	if consumed {
-		// Partial match in upper, try to continue in lower
-		item, _, _ = seekInRow(lower, node)
-		if item != nil {
-			return item, nil
+	// Try partial match in upper, continuing in lower
+	// We only do this if we find a partial match at the start of the upper row (after skipping)
+	// that doesn't form a full item on its own in the upper row.
+	bestUpperItem, upperMatchCount, upperSkipCount, partialNode := seekInRow(*upper, trie.Root)
+	if partialNode != nil && bestUpperItem == nil {
+		item2, lowerMatchCount, lowerSkipCount, _ := seekInRow(*lower, partialNode)
+		if item2 != nil {
+			*upper = append((*upper)[:upperSkipCount], (*upper)[upperSkipCount+upperMatchCount:]...)
+			*lower = append((*lower)[:lowerSkipCount], (*lower)[lowerSkipCount+lowerMatchCount:]...)
+			return item2, nil
 		}
 	}
 
 	return nil, fmt.Errorf("no item found")
 }
 
-func seekInRow(row *[]string, startNode *TrieNode) (*wfm.Item, *TrieNode, bool) {
-	ptr := 0
-	currNode := startNode
-	wordsFound := 0
+func findLongestMatchInRow(row []string, startNode *TrieNode) (*wfm.Item, int, int) {
+	item, matchCount, skipCount, _ := seekInRow(row, startNode)
+	return item, matchCount, skipCount
+}
 
-	for ptr < len(*row) {
-		word := (*row)[ptr]
-		if nextNode, ok := currNode.Children[word]; ok {
-			currNode = nextNode
-			wordsFound++
-			ptr++
-		} else {
-			if wordsFound > 0 {
-				// We were matching and it stopped.
-				*row = append((*row)[:ptr-wordsFound], (*row)[ptr:]...)
-				return currNode.Item, currNode, true
-			}
-			// If we are at the start (Root), we skip this word and keep looking for a match start
-			if currNode == startNode {
-				ptr++
+func seekInRow(row []string, startNode *TrieNode) (*wfm.Item, int, int, *TrieNode) {
+	bestItem := (*wfm.Item)(nil)
+	bestMatchCount := 0
+	bestSkipCount := 0
+	var bestPartialNode *TrieNode
+
+	for skip := 0; skip < len(row); skip++ {
+		currNode := startNode
+		matchCount := 0
+		for i := skip; i < len(row); i++ {
+			if nextNode, ok := currNode.Children[row[i]]; ok {
+				currNode = nextNode
+				matchCount++
+				if currNode.Item != nil {
+					bestItem = currNode.Item
+					bestMatchCount = matchCount
+					bestSkipCount = skip
+					bestPartialNode = nil // Full match found, reset partial node
+				} else if bestItem == nil {
+					// Only track partial match if we haven't found a full one yet
+					bestMatchCount = matchCount
+					bestSkipCount = skip
+					bestPartialNode = currNode
+				}
 			} else {
-				// We were trying to continue a match from a previous row, but it failed immediately.
-				return nil, startNode, false
+				break
 			}
+		}
+		if bestItem != nil {
+			return bestItem, bestMatchCount, bestSkipCount, nil
+		}
+		if bestPartialNode != nil {
+			return nil, bestMatchCount, bestSkipCount, bestPartialNode
 		}
 	}
 
-	if wordsFound > 0 {
-		*row = append((*row)[:ptr-wordsFound], (*row)[ptr:]...)
-		return currNode.Item, currNode, true
-	}
-
-	return nil, startNode, false
+	return nil, 0, 0, nil
 }
 
 func preprocessImage(img image.Image) image.Image {
@@ -155,10 +171,36 @@ func getWordsFromImage(c *gosseract.Client, img image.Image) ([]string, error) {
 	legalWords := AllLegalWords()
 	words := []string{}
 
-	// Split the text into words
-	for word := range strings.FieldsSeq(text) {
+	// Split the text into words by whitespace, non-alphabetic characters, and case changes
+	var currentWord strings.Builder
+	var wordsToProcess []string
+	for i, r := range text {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+			if i > 0 {
+				prev := rune(text[i-1])
+				// Split on lower -> UPPER
+				if (prev >= 'a' && prev <= 'z') && (r >= 'A' && r <= 'Z') {
+					if currentWord.Len() > 0 {
+						wordsToProcess = append(wordsToProcess, currentWord.String())
+						currentWord.Reset()
+					}
+				}
+			}
+			currentWord.WriteRune(r)
+		} else {
+			if currentWord.Len() > 0 {
+				wordsToProcess = append(wordsToProcess, currentWord.String())
+				currentWord.Reset()
+			}
+		}
+	}
+	if currentWord.Len() > 0 {
+		wordsToProcess = append(wordsToProcess, currentWord.String())
+	}
+
+	for _, word := range wordsToProcess {
 		word = strings.TrimSpace(word)
-		if correctedWord, ok := closestLegalWord(word, legalWords, 2); ok {
+		if correctedWord, ok := closestLegalWord(word, legalWords, 3); ok {
 			words = append(words, correctedWord)
 		}
 	}

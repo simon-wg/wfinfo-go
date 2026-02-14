@@ -77,7 +77,7 @@ func TestSeekInRow(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			row := tt.row
-			item, _, _ := seekInRow(&row, trie.Root)
+			item, matchCount, skipCount, _ := seekInRow(row, trie.Root)
 			if tt.expectedItem == "" {
 				if item != nil {
 					t.Errorf("Expected no item, got %v", item.I18N["en"].Name)
@@ -88,6 +88,20 @@ func TestSeekInRow(t *testing.T) {
 				}
 				if item.I18N["en"].Name != tt.expectedItem {
 					t.Errorf("Expected item %q, got %q", tt.expectedItem, item.I18N["en"].Name)
+				}
+			}
+
+			if matchCount != tt.expectedWords {
+				t.Errorf("Expected matchCount %d, got %d", tt.expectedWords, matchCount)
+			}
+
+			remainingRow := append(row[:skipCount], row[skipCount+matchCount:]...)
+			if len(remainingRow) != len(tt.remainingRow) {
+				t.Fatalf("Expected remainingRow length %d, got %d: %v", len(tt.remainingRow), len(remainingRow), remainingRow)
+			}
+			for i, word := range remainingRow {
+				if word != tt.remainingRow[i] {
+					t.Errorf("Expected word %d in remainingRow to be %q, got %q", i, tt.remainingRow[i], word)
 				}
 			}
 		})

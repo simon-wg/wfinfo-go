@@ -47,7 +47,7 @@ func TestOCR(t *testing.T) {
 			name:      "Harrier",
 			imagePath: "testdata/harrier-1.png",
 			expectedItems: []string{
-				"Grendle Prime Chassis Blueprint",
+				"Grendel Prime Chassis Blueprint",
 				"Cernos Prime Grip",
 				"Bo Prime Blueprint",
 				"Quassus Prime Blueprint",
