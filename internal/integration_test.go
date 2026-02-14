@@ -8,7 +8,7 @@ import (
 )
 
 func TestOCR(t *testing.T) {
-	img, err := imaging.Open("testdata/1.png")
+	img, err := imaging.Open("testdata/legacy-1.png")
 	if err != nil {
 		t.Fatalf("Error opening image: %v", err)
 	}
