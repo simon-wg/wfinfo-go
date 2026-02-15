@@ -13,13 +13,6 @@ import (
 	"github.com/simon-wg/wfinfo-go/internal/wfm"
 )
 
-type Box struct {
-	px int
-	py int
-	dx int
-	dy int
-}
-
 func DetectItems(img image.Image) []wfm.Item {
 	// This only works for 1080p, 4 items
 	// Good enough for the simple case
@@ -60,7 +53,9 @@ func detectItemInBox(img *image.Image, rect image.Rectangle, client *gosseract.C
 	if err := png.Encode(imgBuf, isolated); err != nil {
 		return nil, err
 	}
-	client.SetImageFromBytes(imgBuf.Bytes())
+	if err := client.SetImageFromBytes(imgBuf.Bytes()); err != nil {
+		return nil, err
+	}
 	text, err := client.Text()
 	if err != nil {
 		return nil, err

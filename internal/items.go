@@ -35,7 +35,7 @@ func filterPrimeItems(items []wfm.Item) []wfm.Item {
 			continue
 		}
 		// Make sure it's a weapon component/bp
-		if slices.Contains(item.Tags, "weapon") && !(slices.Contains(item.Tags, "blueprint") || slices.Contains(item.Tags, "component")) {
+		if slices.Contains(item.Tags, "weapon") && (!slices.Contains(item.Tags, "blueprint") && !slices.Contains(item.Tags, "component")) {
 			continue
 		}
 		// Make sure it's a valid warframe bp
