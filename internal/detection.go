@@ -24,30 +24,33 @@ func DetectItems(img image.Image) []wfm.Item {
 	// This only works for 1080p, 4 items
 	// Good enough for the simple case
 	// (px, py, dx, dy)
-	rect1 := image.Rect(477, 412, 477+239, 412+50)
-	rect2 := image.Rect(719, 412, 719+239, 412+50)
-	rect3 := image.Rect(962, 412, 962+239, 412+50)
-	rect4 := image.Rect(1204, 412, 1204+239, 412+50)
+	rects := []image.Rectangle{
+		image.Rect(477, 412, 477+239, 412+50),
+		image.Rect(719, 412, 719+239, 412+50),
+		image.Rect(962, 412, 962+239, 412+50),
+		image.Rect(1204, 412, 1204+239, 412+50),
+	}
 	client := gosseract.NewClient()
 	defer func() { _ = client.Close() }()
 	if err := client.SetWhitelist("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ& \n"); err != nil {
 		return nil
 	}
 	textColor := detectTextColor(&img)
-	itemName1, _ := detectItemInBox(&img, rect1, client, textColor)
-	itemName2, _ := detectItemInBox(&img, rect2, client, textColor)
-	itemName3, _ := detectItemInBox(&img, rect3, client, textColor)
-	itemName4, _ := detectItemInBox(&img, rect4, client, textColor)
 
 	relicItems := getRelicItems()
 	relicItemNames := getItemNames(relicItems)
 
-	item1 := findBestItem(*itemName1, relicItems, relicItemNames)
-	item2 := findBestItem(*itemName2, relicItems, relicItemNames)
-	item3 := findBestItem(*itemName3, relicItems, relicItemNames)
-	item4 := findBestItem(*itemName4, relicItems, relicItemNames)
+	items := make([]wfm.Item, 0, len(rects))
+	for _, rect := range rects {
+		itemName, _ := detectItemInBox(&img, rect, client, textColor)
+		if itemName == nil {
+			continue
+		}
+		item := findBestItem(*itemName, relicItems, relicItemNames)
+		items = append(items, item)
+	}
 
-	return []wfm.Item{item1, item2, item3, item4}
+	return items
 }
 
 func detectItemInBox(img *image.Image, rect image.Rectangle, client *gosseract.Client, textColor color.RGBA) (*string, error) {

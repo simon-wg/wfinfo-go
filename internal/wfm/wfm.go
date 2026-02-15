@@ -73,6 +73,26 @@ func (c *Client) context() context.Context {
 	return context.Background()
 }
 
+func fetchResource[T any](c *Client, query url.Values, path ...string) (T, error) {
+	u := c.baseURL.JoinPath(path...)
+	if query != nil {
+		u.RawQuery = query.Encode()
+	}
+	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
+	if err != nil {
+		var zero T
+		return zero, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	var resp genericResponse[T]
+	if err := c.do(req, &resp); err != nil {
+		var zero T
+		return zero, err
+	}
+
+	return resp.Data, nil
+}
+
 func (c *Client) do(req *http.Request, v any) error {
 	ctx := req.Context()
 	var resp *http.Response
@@ -133,21 +153,15 @@ func (c *Client) FetchItems() ([]Item, error) {
 		}
 	}
 
-	u := c.baseURL.JoinPath("v2", "items")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
+	items, err := fetchResource[[]Item](c, nil, "v2", "items")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, err
 	}
 
-	var resp genericResponse[[]Item]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch items: %w", err)
-	}
-
-	saveToCache(c, "items.json", resp.Data)
+	saveToCache(c, "items.json", items)
 	saveToCache(c, "versions.json", currentVersions)
 
-	return resp.Data, nil
+	return items, nil
 }
 
 func (c *Client) getCachePath(filename string) string {
@@ -179,313 +193,104 @@ func saveToCache[T any](c *Client, filename string, v T) {
 
 // FetchVersions fetches the current version number of the server's resources.
 func (c *Client) FetchVersions() (*Versions, error) {
-	u := c.baseURL.JoinPath("v2", "versions")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*Versions]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch versions: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*Versions](c, nil, "v2", "versions")
 }
 
 // FetchItem fetches full info about one particular item.
 func (c *Client) FetchItem(slug string) (*Item, error) {
-	u := c.baseURL.JoinPath("v2", "item", slug)
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*Item]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch item: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*Item](c, nil, "v2", "item", slug)
 }
 
 // FetchItemSet retrieves information on item sets.
 func (c *Client) FetchItemSet(slug string) (*ItemSet, error) {
-	u := c.baseURL.JoinPath("v2", "item", slug, "set")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*ItemSet]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch item set: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*ItemSet](c, nil, "v2", "item", slug, "set")
 }
 
 // FetchRivenWeapons fetches all tradable riven items.
 func (c *Client) FetchRivenWeapons() ([]Riven, error) {
-	u := c.baseURL.JoinPath("v2", "riven", "weapons")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]Riven]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch riven weapons: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]Riven](c, nil, "v2", "riven", "weapons")
 }
 
 // FetchRivenWeapon fetches full info about one particular riven item.
 func (c *Client) FetchRivenWeapon(slug string) (*Riven, error) {
-	u := c.baseURL.JoinPath("v2", "riven", "weapon", slug)
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*Riven]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch riven weapon: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*Riven](c, nil, "v2", "riven", "weapon", slug)
 }
 
 // FetchRivenAttributes fetches all attributes for riven weapons.
 func (c *Client) FetchRivenAttributes() ([]RivenAttribute, error) {
-	u := c.baseURL.JoinPath("v2", "riven", "attributes")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]RivenAttribute]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch riven attributes: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]RivenAttribute](c, nil, "v2", "riven", "attributes")
 }
 
 // FetchLichWeapons fetches all tradable lich weapons.
 func (c *Client) FetchLichWeapons() ([]LichWeapon, error) {
-	u := c.baseURL.JoinPath("v2", "lich", "weapons")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]LichWeapon]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch lich weapons: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]LichWeapon](c, nil, "v2", "lich", "weapons")
 }
 
 // FetchLichWeapon fetches full info about one particular lich weapon.
 func (c *Client) FetchLichWeapon(slug string) (*LichWeapon, error) {
-	u := c.baseURL.JoinPath("v2", "lich", "weapon", slug)
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*LichWeapon]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch lich weapon: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*LichWeapon](c, nil, "v2", "lich", "weapon", slug)
 }
 
 // FetchLichEphemeras fetches all tradable lich ephemeras.
 func (c *Client) FetchLichEphemeras() ([]LichEphemera, error) {
-	u := c.baseURL.JoinPath("v2", "lich", "ephemeras")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]LichEphemera]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch lich ephemeras: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]LichEphemera](c, nil, "v2", "lich", "ephemeras")
 }
 
 // FetchLichQuirks fetches all tradable lich quirks.
 func (c *Client) FetchLichQuirks() ([]LichQuirk, error) {
-	u := c.baseURL.JoinPath("v2", "lich", "quirks")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]LichQuirk]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch lich quirks: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]LichQuirk](c, nil, "v2", "lich", "quirks")
 }
 
 // FetchSisterWeapons fetches all tradable sister weapons.
 func (c *Client) FetchSisterWeapons() ([]SisterWeapon, error) {
-	u := c.baseURL.JoinPath("v2", "sister", "weapons")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]SisterWeapon]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch sister weapons: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]SisterWeapon](c, nil, "v2", "sister", "weapons")
 }
 
 // FetchSisterWeapon fetches full info about one particular sister weapon.
 func (c *Client) FetchSisterWeapon(slug string) (*SisterWeapon, error) {
-	u := c.baseURL.JoinPath("v2", "sister", "weapon", slug)
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*SisterWeapon]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch sister weapon: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*SisterWeapon](c, nil, "v2", "sister", "weapon", slug)
 }
 
 // FetchSisterEphemeras fetches all tradable sister ephemeras.
 func (c *Client) FetchSisterEphemeras() ([]SisterEphemera, error) {
-	u := c.baseURL.JoinPath("v2", "sister", "ephemeras")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]SisterEphemera]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch sister ephemeras: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]SisterEphemera](c, nil, "v2", "sister", "ephemeras")
 }
 
 // FetchSisterQuirks fetches all tradable sister quirks.
 func (c *Client) FetchSisterQuirks() ([]SisterQuirk, error) {
-	u := c.baseURL.JoinPath("v2", "sister", "quirks")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]SisterQuirk]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch sister quirks: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]SisterQuirk](c, nil, "v2", "sister", "quirks")
 }
 
 // FetchLocations fetches all known locations.
 func (c *Client) FetchLocations() ([]Location, error) {
-	u := c.baseURL.JoinPath("v2", "locations")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]Location]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch locations: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]Location](c, nil, "v2", "locations")
 }
 
 // FetchNpcs fetches all known NPCs.
 func (c *Client) FetchNpcs() ([]Npc, error) {
-	u := c.baseURL.JoinPath("v2", "npcs")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]Npc]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch npcs: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]Npc](c, nil, "v2", "npcs")
 }
 
 // FetchMissions fetches all known missions.
 func (c *Client) FetchMissions() ([]Mission, error) {
-	u := c.baseURL.JoinPath("v2", "missions")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]Mission]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch missions: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]Mission](c, nil, "v2", "missions")
 }
 
 // FetchRecentOrders fetches the most recent orders.
 func (c *Client) FetchRecentOrders() ([]OrderWithUser, error) {
-	u := c.baseURL.JoinPath("v2", "orders", "recent")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]OrderWithUser]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch recent orders: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]OrderWithUser](c, nil, "v2", "orders", "recent")
 }
 
 // FetchItemOrders fetches all orders for an item from users online within the last 7 days.
 func (c *Client) FetchItemOrders(slug string) ([]OrderWithUser, error) {
-	u := c.baseURL.JoinPath("v2", "orders", "item", slug)
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]OrderWithUser]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch item orders: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]OrderWithUser](c, nil, "v2", "orders", "item", slug)
 }
 
 // FetchItemTopOrders fetches the top 5 buy and top 5 sell orders for a specific item.
 func (c *Client) FetchItemTopOrders(slug string, params *TopOrdersParams) (*TopOrders, error) {
-	u := c.baseURL.JoinPath("v2", "orders", "item", slug, "top")
+	var q url.Values
 	if params != nil {
-		q := u.Query()
+		q = make(url.Values)
 		if params.Rank != nil {
 			q.Set("rank", fmt.Sprintf("%d", *params.Rank))
 		}
@@ -513,174 +318,62 @@ func (c *Client) FetchItemTopOrders(slug string, params *TopOrdersParams) (*TopO
 		if params.Subtype != "" {
 			q.Set("subtype", params.Subtype)
 		}
-		u.RawQuery = q.Encode()
 	}
 
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*TopOrders]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch top orders: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*TopOrders](c, q, "v2", "orders", "item", slug, "top")
 }
 
 // FetchUserOrders fetches public orders from a specified user by slug.
 func (c *Client) FetchUserOrders(slug string) ([]Order, error) {
-	u := c.baseURL.JoinPath("v2", "orders", "user", slug)
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]Order]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch user orders: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]Order](c, nil, "v2", "orders", "user", slug)
 }
 
 // FetchUserOrdersById fetches public orders from a specified user by ID.
 func (c *Client) FetchUserOrdersById(userId string) ([]Order, error) {
-	u := c.baseURL.JoinPath("v2", "orders", "userId", userId)
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]Order]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch user orders by id: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]Order](c, nil, "v2", "orders", "userId", userId)
 }
 
 // FetchOrder fetches a single order by ID.
 func (c *Client) FetchOrder(id string) (*OrderWithUser, error) {
-	u := c.baseURL.JoinPath("v2", "order", id)
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*OrderWithUser]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch order: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*OrderWithUser](c, nil, "v2", "order", id)
 }
 
 // FetchUser fetches information about a particular user by slug.
 func (c *Client) FetchUser(slug string) (*User, error) {
-	u := c.baseURL.JoinPath("v2", "user", slug)
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*User]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch user: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*User](c, nil, "v2", "user", slug)
 }
 
 // FetchUserById fetches information about a particular user by ID.
 func (c *Client) FetchUserById(userId string) (*User, error) {
-	u := c.baseURL.JoinPath("v2", "userId", userId)
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*User]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch user by id: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*User](c, nil, "v2", "userId", userId)
 }
 
 // FetchAchievements fetches all available achievements (except secret ones).
 func (c *Client) FetchAchievements() ([]Achievement, error) {
-	u := c.baseURL.JoinPath("v2", "achievements")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]Achievement]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch achievements: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]Achievement](c, nil, "v2", "achievements")
 }
 
 // FetchUserAchievements fetches all user achievements by slug.
 func (c *Client) FetchUserAchievements(slug string, featured bool) ([]Achievement, error) {
-	u := c.baseURL.JoinPath("v2", "achievements", "user", slug)
+	var q url.Values
 	if featured {
-		q := u.Query()
+		q = make(url.Values)
 		q.Set("featured", "true")
-		u.RawQuery = q.Encode()
 	}
-
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]Achievement]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch user achievements: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]Achievement](c, q, "v2", "achievements", "user", slug)
 }
 
 // FetchUserAchievementsById fetches all user achievements by ID.
 func (c *Client) FetchUserAchievementsById(userId string, featured bool) ([]Achievement, error) {
-	u := c.baseURL.JoinPath("v2", "achievements", "userId", userId)
+	var q url.Values
 	if featured {
-		q := u.Query()
+		q = make(url.Values)
 		q.Set("featured", "true")
-		u.RawQuery = q.Encode()
 	}
-
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[[]Achievement]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch user achievements by id: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[[]Achievement](c, q, "v2", "achievements", "userId", userId)
 }
 
 // FetchDashboardShowcase fetches featured items for the mobile app main screen.
 func (c *Client) FetchDashboardShowcase() (*DashboardShowcase, error) {
-	u := c.baseURL.JoinPath("v2", "dashboard", "showcase")
-	req, err := http.NewRequestWithContext(c.context(), http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	var resp genericResponse[*DashboardShowcase]
-	if err := c.do(req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch dashboard showcase: %w", err)
-	}
-
-	return resp.Data, nil
+	return fetchResource[*DashboardShowcase](c, nil, "v2", "dashboard", "showcase")
 }

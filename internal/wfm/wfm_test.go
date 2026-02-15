@@ -78,6 +78,31 @@ func TestClient_FetchItemTopOrders(t *testing.T) {
 	}
 }
 
+func TestClient_FetchItem(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v2/item/ash-prime" {
+			t.Errorf("Unexpected path: %s", r.URL.Path)
+		}
+
+		_ = json.NewEncoder(w).Encode(genericResponse[*Item]{
+			Data: &Item{Slug: "ash-prime"},
+		})
+	}))
+	defer server.Close()
+
+	u, _ := url.Parse(server.URL)
+	client := NewClient(WithBaseURL(u))
+
+	item, err := client.FetchItem("ash-prime")
+	if err != nil {
+		t.Fatalf("FetchItem failed: %v", err)
+	}
+
+	if item.Slug != "ash-prime" {
+		t.Errorf("Expected ash-prime, got %s", item.Slug)
+	}
+}
+
 func TestWithBaseURL(t *testing.T) {
 	u, _ := url.Parse("https://example.com")
 	client := NewClient(WithBaseURL(u))
