@@ -2,17 +2,18 @@ package internal
 
 import (
 	"slices"
-	"strings"
 
 	"github.com/simon-wg/wfinfo-go/internal/wfm"
 )
 
-func GetPrimeItems() []wfm.Item {
-	return filterPrimeItems(GetItems())
-}
-
-func filterPrimeItems(items []wfm.Item) []wfm.Item {
-	forma := wfm.Item{
+func getRelicItems() []wfm.Item {
+	client := wfm.NewClient()
+	items, err := client.FetchItems()
+	if err != nil {
+		return nil
+	}
+	primes := filterPrimeItems(items)
+	relicItems := append(primes, wfm.Item{
 		Id:      "forma",
 		Slug:    "forma",
 		GameRef: "forma",
@@ -22,55 +23,49 @@ func filterPrimeItems(items []wfm.Item) []wfm.Item {
 				Name: "Forma Blueprint",
 			},
 		},
-	}
+	})
+	return relicItems
+}
 
-	var primeItems []wfm.Item
-	// Filter items that can be found in relics
+func filterPrimeItems(items []wfm.Item) []wfm.Item {
+	primeItems := []wfm.Item{}
 	for _, item := range items {
-		if item.Tags == nil {
-			continue // Skip items without tags
+		// Make sure it's prime
+		if !slices.Contains(item.Tags, "prime") {
+			continue
 		}
-		if !slices.Contains(item.Tags, "prime") || (!slices.Contains(item.Tags, "blueprint") && !slices.Contains(item.Tags, "component")) {
+		// Make sure it's a weapon component/bp
+		if slices.Contains(item.Tags, "weapon") && !(slices.Contains(item.Tags, "blueprint") || slices.Contains(item.Tags, "component")) {
+			continue
+		}
+		// Make sure it's a valid warframe bp
+		if slices.Contains(item.Tags, "warframe") && !(slices.Contains(item.Tags, "blueprint")) {
 			continue
 		}
 		primeItems = append(primeItems, item)
 	}
-
-	primeItems = append(primeItems, forma) // Add Forma to the items fetched from the API
-
 	return primeItems
 }
 
-// GetItems retrieves all items from the Warframe Market API or from a local cache file.
-func GetItems() []wfm.Item {
-	client := wfm.NewClient()
-	items, err := client.FetchItems()
-	if err != nil {
-		panic(err)
-	}
-
-	return items
-}
-
-// Provides a list of all legal words that can be used in item names.
-func AllLegalWords() []string {
-	return extractLegalWords(GetPrimeItems())
-}
-
-func extractLegalWords(items []wfm.Item) []string {
-	legalWords := map[string]struct{}{}
-
+func getItemNames(items []wfm.Item) []string {
+	names := []string{}
 	for _, item := range items {
-		for word := range strings.SplitSeq(item.I18N["en"].Name, " ") {
-			legalWords[word] = struct{}{} // Use a map to ensure uniqueness
+		names = append(names, item.I18N["en"].Name)
+	}
+	return names
+}
+
+func findBestItem(itemName string, relicItems []wfm.Item, relicItemNames []string) wfm.Item {
+	bestName := smithWaterman(itemName, relicItemNames)
+	item := getItemFromName(bestName, relicItems)
+	return item
+}
+
+func getItemFromName(name string, items []wfm.Item) wfm.Item {
+	for _, item := range items {
+		if item.I18N["en"].Name == name {
+			return item
 		}
 	}
-	words := []string{"Forma"}
-	for word := range legalWords {
-		if word == "Forma" {
-			continue
-		}
-		words = append(words, word)
-	}
-	return words
+	panic("no item found")
 }

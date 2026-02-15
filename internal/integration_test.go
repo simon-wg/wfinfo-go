@@ -91,7 +91,7 @@ func TestOCR(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error opening image: %v", err)
 			}
-			items, err := internal.GetItemsFromImage(img)
+			items := internal.DetectItems(img)
 			if err != nil {
 				t.Fatalf("Error getting items from image: %v", err)
 			}
