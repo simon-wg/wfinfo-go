@@ -14,83 +14,12 @@ The tool is written entirely in Go and utilizes Tesseract for high-accuracy Opti
 - **Live Market Data:** Fetches up-to-date pricing information directly from the `warframe.market` API.
 - **Resource Efficient:** Uses an event-driven architecture for log monitoring and optimizes OCR/API requests to minimize CPU and IO overhead.
 
-## Dependencies
-
-### Runtime Dependencies
-If you are using a pre-built binary, you only need the Tesseract engine and its shared libraries.
-
-- **Tesseract OCR**: The engine and English language data.
-- **Shared Libraries**: `libtesseract` and `libleptonica`.
-
-### Build Dependencies
-If you are building from source, you need the following in addition to the runtime dependencies:
-
-- **Go** (version 1.26 or later)
-- **C Compiler**: `gcc` or `clang` for CGO bindings.
-- **Development Headers**: Headers for `libtesseract` and `libleptonica`.
-- **pkg-config**: Required for the Go build system to locate Tesseract.
-
-## Installation
-
-### Ubuntu/Debian
-
-**To run:**
-```bash
-sudo apt-get install tesseract-ocr libtesseract5
-```
-
-**To build:**
-```bash
-sudo apt-get install golang tesseract-ocr libtesseract-dev pkg-config build-essential
-```
-
-### Fedora
-
-**To run:**
-```bash
-sudo dnf install tesseract tesseract-langpack-eng
-```
-
-**To build:**
-```bash
-sudo dnf install golang tesseract-devel gcc pkg-config
-```
-
-### Arch
-
-**To run:**
-```bash
-sudo pacman -S tesseract tesseract-data-eng
-```
-
-**To build:**
-```bash
-sudo pacman -S go tesseract gcc pkgconf
-```
-
-## Building
-
-You can build the project using the provided `Taskfile.yml` (requires [go-task](https://taskfile.dev/)) or standard Go commands.
-
-### Using Task
-
-```bash
-task build
-```
-This will place the binary in `bin/wfinfo-go`.
-
-### Using Go directly
-
-```bash
-go build -o bin/wfinfo-go ./cmd/wfinfo-go
-```
-
 ## Usage
 
-Run the program from your terminal. It will stay active and watch for reward screens.
+Run the program from your terminal while Warframe is running. It will stay active in the background, monitoring your `EE.log` for reward screen events.
 
 ```bash
-./bin/wfinfo-go [flags]
+wfinfo-go [flags]
 ```
 
 ### Flags
@@ -102,7 +31,90 @@ Run the program from your terminal. It will stay active and watch for reward scr
 ### Example
 
 ```bash
-./bin/wfinfo-go -d ~/.local/share/Steam
+wfinfo-go -d ~/.local/share/Steam
+```
+
+## Running
+
+You can run the binary directly from the `bin` directory or from your system path if installed.
+
+### Runtime Dependencies
+
+To run the pre-built binary, you only need the Tesseract engine and its shared libraries.
+
+- **Tesseract OCR**: The engine and English language data.
+- **Shared Libraries**: `libtesseract` and `libleptonica`.
+
+#### Installation
+
+**Ubuntu/Debian**
+```bash
+sudo apt-get install tesseract-ocr libtesseract5
+```
+
+**Fedora**
+```bash
+sudo dnf install tesseract tesseract-langpack-eng
+```
+
+**Arch**
+```bash
+sudo pacman -S tesseract tesseract-data-eng
+```
+
+## Building
+
+### Build Dependencies
+
+If you are building from source, you need the following in addition to the runtime dependencies:
+
+- **Go** (version 1.26 or later)
+- **C Compiler**: `gcc` or `clang` for CGO bindings.
+- **Development Headers**: Headers for `libtesseract` and `libleptonica`.
+- **pkg-config**: Required for the Go build system to locate Tesseract.
+
+#### Installation
+
+**Ubuntu/Debian**
+```bash
+sudo apt-get install golang tesseract-ocr libtesseract-dev pkg-config build-essential
+```
+
+**Fedora**
+```bash
+sudo dnf install golang tesseract-devel gcc pkg-config
+```
+
+**Arch**
+```bash
+sudo pacman -S go tesseract gcc pkgconf
+```
+
+### Build Instructions
+
+You can build the project using the provided `Taskfile.yml` (requires [go-task](https://taskfile.dev/)) or standard Go commands.
+
+**Using Task**
+```bash
+task build
+```
+This will place the binary in `bin/wfinfo-go`.
+
+**Using Go directly**
+```bash
+go build -o bin/wfinfo-go ./cmd/wfinfo-go
+```
+
+### Installation & Uninstallation
+
+To install the binary to `/usr/local/bin`:
+```bash
+sudo task install
+```
+
+To uninstall:
+```bash
+sudo task uninstall
 ```
 
 ## How It Works

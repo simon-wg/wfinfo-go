@@ -30,3 +30,18 @@ tasks:
     desc: Clean build artifacts
     cmds:
       - rm -rf bin
+
+  install:
+    desc: Install the binary (defaults to /usr/local/bin)
+    deps: [build]
+    vars:
+      PREFIX: '{{default "/usr/local" .PREFIX}}'
+    cmds:
+      - install -D bin/wfinfo-go {{.PREFIX}}/bin/wfinfo-go
+
+  uninstall:
+    desc: Uninstall the binary (defaults to /usr/local/bin)
+    vars:
+      PREFIX: '{{default "/usr/local" .PREFIX}}'
+    cmds:
+      - rm -f {{.PREFIX}}/bin/wfinfo-go
