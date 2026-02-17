@@ -17,19 +17,9 @@ import (
 )
 
 func Run(filePath string, steamLibrary string) error {
-	var fullPath string
-	if filePath == "" {
-		path, err := expandPath(steamLibrary)
-		if err != nil {
-			return err
-		}
-		fullPath = filepath.Join(path, "steamapps/compatdata/230410/pfx/drive_c/users/steamuser/AppData/Local/Warframe/EE.log")
-	} else {
-		path, err := expandPath(filePath)
-		if err != nil {
-			return err
-		}
-		fullPath = path
+	fullPath, err := resolveEEPath(filePath, steamLibrary)
+	if err != nil {
+		return err
 	}
 
 	watcher, err := fsnotify.NewWatcher()
@@ -55,13 +45,13 @@ func Run(filePath string, steamLibrary string) error {
 		foundItems: make(chan []wfm.Item),
 	}
 
-	log.Printf("Watching %s for relic screen\n", filePath)
+	log.Printf("Watching %s for relic screen\n", fullPath)
 
 	for {
 		select {
 		case items := <-s.foundItems:
 			for _, item := range items {
-				println(item.I18N["en"].Name)
+				log.Println(item.I18N["en"].Name)
 			}
 		case event, ok := <-watcher.Events:
 			if !ok {
@@ -124,7 +114,7 @@ func (s *state) triggerDetection() {
 	img := s.screenshot()
 
 	// img, _ := imgio.Open("internal/testdata/conquera-1.png")
-	println("detecting items")
+	log.Println("detecting items")
 	s.foundItems <- DetectItems(img)
 }
 
@@ -137,6 +127,18 @@ func expandPath(path string) (string, error) {
 		path = filepath.Join(home, path[2:])
 	}
 	return filepath.Clean(path), nil
+}
+
+func resolveEEPath(filePath, steamLibrary string) (string, error) {
+	if filePath != "" {
+		return expandPath(filePath)
+	}
+
+	path, err := expandPath(steamLibrary)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(path, "steamapps/compatdata/230410/pfx/drive_c/users/steamuser/AppData/Local/Warframe/EE.log"), nil
 }
 
 func processLogLine(line string) bool {
