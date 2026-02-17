@@ -37,11 +37,11 @@ tasks:
     vars:
       PREFIX: '{{default "/usr/local" .PREFIX}}'
     cmds:
-      - install -D bin/wfinfo-go {{.PREFIX}}/bin/wfinfo-go
+      - sudo install -D bin/wfinfo-go {{.PREFIX}}/bin/wfinfo-go
 
   uninstall:
     desc: Uninstall the binary (defaults to /usr/local/bin)
     vars:
       PREFIX: '{{default "/usr/local" .PREFIX}}'
     cmds:
-      - rm -f {{.PREFIX}}/bin/wfinfo-go
+      - sudo rm -f {{.PREFIX}}/bin/wfinfo-go

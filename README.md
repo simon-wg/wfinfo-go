@@ -109,12 +109,12 @@ go build -o bin/wfinfo-go ./cmd/wfinfo-go
 
 To install the binary to `/usr/local/bin`:
 ```bash
-sudo task install
+task install
 ```
 
 To uninstall:
 ```bash
-sudo task uninstall
+task uninstall
 ```
 
 ## How It Works
