@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anthonynsimon/bild/imgio"
 	"github.com/fsnotify/fsnotify"
 	"github.com/jezek/xgb"
 	"github.com/jezek/xgb/xproto"
@@ -156,8 +155,6 @@ func (s *state) screenshot() image.Image {
 		log.Fatal(err)
 	}
 	img := x11ToImage(reply.Data, int(geom.Width), int(geom.Height))
-	// INFO: This is only for debugging. Remove once tested on real window.
-	_ = imgio.Save("screencap.png", img, imgio.PNGEncoder())
 	return img
 }
 
