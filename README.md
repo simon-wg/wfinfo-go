@@ -122,4 +122,4 @@ The program is designed with a focus on performance:
 
 ## License
 
-This project is currently unlicensed. See the source code for more details.
+This project is licensed under the BSD 3-Clause License. See the [LICENSE](LICENSE) file for details.
