@@ -16,10 +16,20 @@ import (
 	"github.com/simon-wg/wfinfo-go/internal/wfm"
 )
 
-func Run(filePath string) error {
-	fullPath, err := expandPath(filePath)
-	if err != nil {
-		return err
+func Run(filePath string, steamLibrary string) error {
+	var fullPath string
+	if filePath == "" {
+		path, err := expandPath(steamLibrary)
+		if err != nil {
+			return err
+		}
+		fullPath = filepath.Join(path, "steamapps/compatdata/230410/pfx/drive_c/users/steamuser/AppData/Local/Warframe/EE.log")
+	} else {
+		path, err := expandPath(filePath)
+		if err != nil {
+			return err
+		}
+		fullPath = path
 	}
 
 	watcher, err := fsnotify.NewWatcher()
