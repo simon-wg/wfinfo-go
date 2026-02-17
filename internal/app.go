@@ -111,7 +111,7 @@ func (s *state) handleLine(line string, err error) {
 }
 
 func (s *state) triggerDetection() {
-	// Screenshot instead
+	time.Sleep(500 * time.Millisecond)
 	img := s.screenshot()
 
 	// img, _ := imgio.Open("internal/testdata/conquera-1.png")
@@ -131,7 +131,7 @@ func expandPath(path string) (string, error) {
 }
 
 func processLogLine(line string) bool {
-	return line == "test123"
+	return strings.Contains(line, "VoidProjections: OpenVoidProjectionRewardScreenRMI") || strings.Contains(line, "ProjectionRewardChoice.lua: Relic rewards initialized") || strings.Contains(line, "VoidProjections: GetVoidProjectionRewards")
 }
 
 func (s *state) screenshot() image.Image {
