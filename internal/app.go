@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -44,11 +45,22 @@ func Run(filePath string, steamLibrary string) error {
 
 	log.Printf("Watching %s for relic screen\n", fullPath)
 
+	client := wfm.NewClient()
+
 	for {
 		select {
 		case items := <-s.foundItems:
 			for _, item := range items {
-				log.Println(item.I18N["en"].Name)
+				detailedInfo, err := client.FetchItemTopOrders(item.Id, nil)
+				if err != nil {
+					log.Printf("Error: Unable to fetch price information for %v, %v\n", item.Id, err)
+				}
+				var sumPrice float32
+				for _, order := range detailedInfo.Sell {
+					sumPrice += float32(order.Platinum)
+				}
+				// Ex. Tekko Prime Gauntlets - 2.75p, 20 ducats
+				fmt.Printf("%v - %.2fp, %v ducats\n", item.I18N["en"].Name, sumPrice/float32(len(detailedInfo.Sell)), item.Ducats)
 			}
 		case event, ok := <-watcher.Events:
 			if !ok {
