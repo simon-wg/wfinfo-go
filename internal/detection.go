@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"log"
 	"math"
 	"strings"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/simon-wg/wfinfo-go/internal/wfm"
 )
 
-func DetectItems(img image.Image) []wfm.Item {
+func DetectItems(img image.Image, client *gosseract.Client) []wfm.Item {
 	// This only works for 1080p, 4 items
 	// Good enough for the simple case
 	// (px, py, dx, dy)
@@ -23,11 +24,7 @@ func DetectItems(img image.Image) []wfm.Item {
 		image.Rect(962, 412, 962+239, 412+50),
 		image.Rect(1204, 412, 1204+239, 412+50),
 	}
-	client := gosseract.NewClient()
-	defer func() { _ = client.Close() }()
-	if err := client.SetWhitelist("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ& \n"); err != nil {
-		return nil
-	}
+
 	textColor := detectTextColor(&img)
 
 	relicItems := getRelicItems()
@@ -35,7 +32,11 @@ func DetectItems(img image.Image) []wfm.Item {
 
 	items := make([]wfm.Item, 0, len(rects))
 	for _, rect := range rects {
-		itemName, _ := detectItemInBox(&img, rect, client, textColor)
+		itemName, err := detectItemInBox(&img, rect, client, textColor)
+		if err != nil {
+			log.Printf("Error detecting item in box: %v", err)
+			continue
+		}
 		if itemName == nil {
 			continue
 		}

@@ -8,9 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/otiai10/gosseract/v2"
 	"github.com/simon-wg/wfinfo-go/internal/wfm"
 )
 
@@ -24,13 +26,21 @@ func Run(filePath string, steamLibrary string) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = watcher.Close() }()
+	defer func() {
+		if err := watcher.Close(); err != nil {
+			log.Printf("Error closing watcher: %v", err)
+		}
+	}()
 
 	file, err := os.Open(fullPath)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Printf("Error closing file: %v", err)
+		}
+	}()
 	if _, err := file.Seek(0, 2); err != nil {
 		return err
 	}
@@ -38,20 +48,34 @@ func Run(filePath string, steamLibrary string) error {
 		return err
 	}
 
-	s := &state{
-		reader:     bufio.NewReader(file),
-		foundItems: make(chan []wfm.Item),
+	ocrClient := gosseract.NewClient()
+	if err := ocrClient.SetWhitelist("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ& \n"); err != nil {
+		return fmt.Errorf("failed to configure OCR: %w", err)
 	}
+
+	s := &appState{
+		logParser: &logParser{
+			reader: bufio.NewReader(file),
+		},
+		detection:  &detectionState{},
+		foundItems: make(chan []wfm.Item),
+		ocrClient:  ocrClient,
+	}
+	defer func() {
+		if err := ocrClient.Close(); err != nil {
+			log.Printf("Error closing OCR client: %v", err)
+		}
+	}()
 
 	log.Printf("Watching %s for relic screen\n", fullPath)
 
-	client := wfm.NewClient()
+	wfmClient := wfm.NewClient()
 
 	for {
 		select {
 		case items := <-s.foundItems:
 			for _, item := range items {
-				detailedInfo, err := client.FetchItemTopOrders(item.Id, nil)
+				detailedInfo, err := wfmClient.FetchItemTopOrders(item.Id, nil)
 				if err != nil {
 					log.Printf("Error: Unable to fetch price information for %v, %v\n", item.Id, err)
 				}
@@ -70,21 +94,32 @@ func Run(filePath string, steamLibrary string) error {
 				s.handleWriteEvent()
 			}
 		case err := <-watcher.Errors:
-			log.Println("error:", err)
+			return err
 		}
 	}
 }
 
-type state struct {
-	reader        *bufio.Reader
-	lineFragment  string
+type detectionState struct {
+	mu            sync.Mutex
 	lastTriggered time.Time
-	foundItems    chan []wfm.Item
 }
 
-func (s *state) handleWriteEvent() {
+type logParser struct {
+	reader       *bufio.Reader
+	lineFragment string
+	mu           sync.Mutex
+}
+
+type appState struct {
+	logParser  *logParser
+	detection  *detectionState
+	foundItems chan []wfm.Item
+	ocrClient  *gosseract.Client
+}
+
+func (s *appState) handleWriteEvent() {
 	for {
-		line, err := s.reader.ReadString('\n')
+		line, err := s.logParser.reader.ReadString('\n')
 		if line != "" {
 			s.handleLine(line, err)
 		}
@@ -98,33 +133,41 @@ func (s *state) handleWriteEvent() {
 	}
 }
 
-func (s *state) handleLine(line string, err error) {
-	line = s.lineFragment + line
+func (s *appState) handleLine(line string, err error) {
+	line = s.logParser.lineFragment + line
 	if err != nil {
-		s.lineFragment = line
+		s.logParser.mu.Lock()
+		s.logParser.lineFragment = line
+		s.logParser.mu.Unlock()
 		return
 	}
 
-	s.lineFragment = ""
+	s.logParser.mu.Lock()
+	s.logParser.lineFragment = ""
+	s.logParser.mu.Unlock()
+
 	if !processLogLine(strings.TrimSpace(line)) {
 		return
 	}
 
-	if time.Since(s.lastTriggered) < 1*time.Minute {
+	s.detection.mu.Lock()
+	defer s.detection.mu.Unlock()
+
+	if time.Since(s.detection.lastTriggered) < 1*time.Minute {
 		return
 	}
 
-	s.lastTriggered = time.Now()
+	s.detection.lastTriggered = time.Now()
 	go s.triggerDetection()
 }
 
-func (s *state) triggerDetection() {
+func (s *appState) triggerDetection() {
 	time.Sleep(500 * time.Millisecond)
 	img := screenshot()
 
 	// img, _ := imgio.Open("internal/testdata/conquera-1.png")
 	log.Println("detecting items")
-	s.foundItems <- DetectItems(img)
+	s.foundItems <- DetectItems(img, s.ocrClient)
 }
 
 func processLogLine(line string) bool {

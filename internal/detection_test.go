@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/anthonynsimon/bild/imgio"
+	"github.com/otiai10/gosseract/v2"
 )
 
 func loadTestImage(t *testing.T, path string) image.Image {
@@ -155,10 +156,12 @@ func TestOCR(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error opening image: %v", err)
 			}
-			items := DetectItems(img)
-			if err != nil {
-				t.Fatalf("Error getting items from image: %v", err)
+			client := gosseract.NewClient()
+			defer func() { _ = client.Close() }()
+			if err := client.SetWhitelist("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ& \n"); err != nil {
+				t.Fatalf("Error configuring OCR: %v", err)
 			}
+			items := DetectItems(img, client)
 
 			actualItems := make([]string, 0, len(items))
 			for _, item := range items {
