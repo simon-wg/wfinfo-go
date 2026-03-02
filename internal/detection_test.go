@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/disintegration/imaging"
+	"github.com/anthonynsimon/bild/imgio"
 )
 
 func loadTestImage(t *testing.T, path string) image.Image {
@@ -151,7 +151,7 @@ func TestOCR(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			img, err := imaging.Open(tt.imagePath)
+			img, err := imgio.Open(tt.imagePath)
 			if err != nil {
 				t.Fatalf("Error opening image: %v", err)
 			}
