@@ -27,18 +27,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y tesseract-ocr tesseract-ocr-eng libtesseract-dev
 
-      - name: Build
+      - name: Build and Package
         run: |
-          mkdir -p bin
-          go build -v -o bin/wfinfo-go ./cmd/wfinfo-go
-          cd bin && sha256sum wfinfo-go > wfinfo-go.sha256
+          VERSION=${GITHUB_REF#refs/tags/}
+          APP_NAME="wfinfo-go"
+          RELEASE_DIR="${APP_NAME}_${VERSION}_linux_amd64"
+
+          mkdir -p "${RELEASE_DIR}/bin"
+
+          GOOS=linux GOARCH=amd64 go build -v -o "${RELEASE_DIR}/bin/${APP_NAME}" ./cmd/${APP_NAME}
+
+          cp README.md LICENSE "${RELEASE_DIR}/" 2>/dev/null || true
+
+          tar -czvf "${RELEASE_DIR}.tar.gz" "${RELEASE_DIR}"
+
+          sha256sum "${RELEASE_DIR}.tar.gz" > "${RELEASE_DIR}.tar.gz.sha256"
+
+      - name: Generate Release Notes
+        run: |
+          npx conventional-changelog-cli -p angular -r 2 > RELEASE_NOTES.md
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            bin/wfinfo-go
-            bin/wfinfo-go.sha256
-          generate_release_notes: true
+            *.tar.gz
+            *.tar.gz.sha256
+          body_path: RELEASE_NOTES.md
           draft: false
           prerelease: false
